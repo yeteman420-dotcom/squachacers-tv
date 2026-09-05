@@ -22,13 +22,15 @@ jobs:
         run: |
           mkdir -p app/src/main/java app/src/main/res/values app/src/main/res/drawable app/src/main/assets gradle/wrapper
 
-          [ -f AndroidManifest.xml ] && mv -f AndroidManifest.xml app/src/main/AndroidManifest.xml
-          [ -f MainActivity.java ] && mv -f MainActivity.java app/src/main/java/MainActivity.java
-          [ -f strings.xml ] && mv -f strings.xml app/src/main/res/values/strings.xml
-          [ -f app_banner.png ] && mv -f app_banner.png app/src/main/res/drawable/app_banner.png
-          [ -f universe_shifter_firetv.html ] && mv -f universe_shifter_firetv.html app/src/main/assets/universe_shifter_firetv.html
-          [ -f build.gradle ] && [ ! -f app/build.gradle ] && mv -f build.gradle app/build.gradle
-          [ -f gradle-wrapper.properties ] && mv -f gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          if [ -f AndroidManifest.xml ]; then mv -f AndroidManifest.xml app/src/main/AndroidManifest.xml; fi
+          if [ -f MainActivity.java ]; then mv -f MainActivity.java app/src/main/java/MainActivity.java; fi
+          if [ -f strings.xml ]; then mv -f strings.xml app/src/main/res/values/strings.xml; fi
+          if [ -f app_banner.png ]; then mv -f app_banner.png app/src/main/res/drawable/app_banner.png; fi
+          if [ -f universe_shifter_firetv.html ]; then mv -f universe_shifter_firetv.html app/src/main/assets/universe_shifter_firetv.html; fi
+          if [ -f build.gradle ] && [ ! -f app/build.gradle ]; then mv -f build.gradle app/build.gradle; fi
+          if [ -f gradle-wrapper.properties ]; then mv -f gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties; fi
+
+          exit 0
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew || true
