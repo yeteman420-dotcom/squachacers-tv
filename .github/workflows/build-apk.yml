@@ -1,0 +1,49 @@
+name: Build Fire TV APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Fix project structure
+        run: |
+          mkdir -p app/src/main/java app/src/main/res/values app/src/main/res/drawable app/src/main/assets gradle/wrapper
+
+          [ -f AndroidManifest.xml ] && mv -f AndroidManifest.xml app/src/main/AndroidManifest.xml
+          [ -f MainActivity.java ] && mv -f MainActivity.java app/src/main/java/MainActivity.java
+          [ -f strings.xml ] && mv -f strings.xml app/src/main/res/values/strings.xml
+          [ -f app_banner.png ] && mv -f app_banner.png app/src/main/res/drawable/app_banner.png
+          [ -f universe_shifter_firetv.html ] && mv -f universe_shifter_firetv.html app/src/main/assets/universe_shifter_firetv.html
+          [ -f build.gradle ] && [ ! -f app/build.gradle ] && mv -f build.gradle app/build.gradle
+          [ -f gradle-wrapper.properties ] && mv -f gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew || true
+
+      - name: Generate gradlew if missing
+        run: |
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.7
+          fi
+
+      - name: Build APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: universe-shifter-tv-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
