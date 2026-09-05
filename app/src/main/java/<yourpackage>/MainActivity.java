@@ -1,6 +1,7 @@
 package com.squachacers.firetv;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.os.Bundle;
 import android.view.KeyEvent;
 import android.view.View;
@@ -8,9 +9,8 @@ import android.view.WindowManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     private WebView webView;
 
@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        // Single-page game with no navigation history to go back through;
+        // Single-page game with no navigation history to go back through.
         // Back on the remote exits the app, which is standard Fire TV behavior.
         super.onBackPressed();
     }
