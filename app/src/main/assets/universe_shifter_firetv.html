@@ -127,6 +127,7 @@
     <div class="version-tag">UNIVERSE SHIFTER 19X</div>
     <div style="font-size:72px;margin:10px 0;filter:drop-shadow(0 0 20px #2e7d32)"><span class="title-emoji">🦶</span></div>
     <div style="color:#888;font-size:12px;line-height:2;letter-spacing:1px">ORTHOSCAN AI: ACTIVE<br>ALIGN MODTOE MODULES<br>OBLITERATE ACERS ANOMALIES</div>
+    <div id="high-score-display" style="color:var(--gold);font-size:13px;letter-spacing:2px;margin-top:10px;font-family:'Black Ops One',cursive;"></div>
     <button class="btn" onclick="startCinematic()">INITIALIZE SCAN</button>
     <div style="margin-top:20px;font-size:10px;color:#444;letter-spacing:2px">TAP / CLICK / DRAG TO PLAY</div>
   </div>
@@ -137,7 +138,8 @@
     <div id="final-stats" style="font-size:60px;color:#fff;margin:10px 0">0</div>
     <div class="hl" style="margin-bottom:12px">TOTAL GRID RECOVERY</div>
     <div id="gs-wave" style="font-family:'Black Ops One';font-size:12px;color:#888;margin-bottom:6px;letter-spacing:3px"></div>
-    <div id="gs-rank" style="font-family:'Black Ops One';font-size:14px;color:var(--gold);margin-bottom:12px;letter-spacing:3px"></div>
+    <div id="gs-rank" style="font-family:'Black Ops One';font-size:14px;color:var(--gold);margin-bottom:6px;letter-spacing:3px"></div>
+    <div id="gs-highscore" style="font-family:'Black Ops One';font-size:11px;color:#ffd700;margin-bottom:12px;letter-spacing:2px"></div>
     <button class="btn" onclick="startCinematic()">RE-SCAN GRID</button>
   </div>
 </div>
@@ -167,6 +169,28 @@ scaleToFit();window.addEventListener('resize',scaleToFit);
 document.querySelector('#ss .btn').focus();
 
 // ═══════════════════════════════════════════════════════════
+// HIGH SCORE (localStorage persistence) — Fix #5
+// ═══════════════════════════════════════════════════════════
+const HS_KEY='squachacers_highscore';
+function getHighScore(){
+  try{return parseInt(localStorage.getItem(HS_KEY),10)||0;}catch(e){return 0;}
+}
+function setHighScore(v){
+  try{localStorage.setItem(HS_KEY,String(v));}catch(e){}
+}
+function maybeUpdateHighScore(finalScore){
+  const cur=getHighScore();
+  if(finalScore>cur){setHighScore(finalScore);return true;}
+  return false;
+}
+function renderTitleHighScore(){
+  const el=document.getElementById('high-score-display');
+  const hs=getHighScore();
+  el.textContent=hs>0?('BEST GRID RECOVERY: '+hs):'';
+}
+renderTitleHighScore();
+
+// ═══════════════════════════════════════════════════════════
 // AUDIO
 // ═══════════════════════════════════════════════════════════
 let audioCtx=null,masterGain=null,muted=false,currentMusic=null;
@@ -175,6 +199,13 @@ function getAudio(){
   if(audioCtx.state==='suspended')audioCtx.resume();
   return audioCtx;
 }
+// Fix #3: resume audio context when tab regains visibility, so music/SFX
+// don't desync or die after the tab has been backgrounded/suspended.
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&audioCtx&&audioCtx.state==='suspended'){
+    audioCtx.resume();
+  }
+});
 function toggleMute(){muted=!muted;if(masterGain)masterGain.gain.value=muted?0:0.18;document.getElementById('mute-btn').textContent=muted?'🔇':'🔊';}
 function playTone(freq,dur,type,vol,t0){
   if(muted||!audioCtx)return;
@@ -319,12 +350,6 @@ function doAction(){
 }
 
 // ─── FIRE TV / D-PAD INPUT ───────────────────────────────────
-// Arrow keys drive the same txS/tyS "target" that mouse/touch drive,
-// so every existing lerp-based movement rule (align/maze/rhythm/boss)
-// works unchanged. Enter/Space is the remote's center/select button:
-// it fires doAction() during gameplay, advances cinematics, and
-// (as a fallback alongside native button focus) activates whichever
-// title/game-over button is currently on screen.
 const dpadKeys={ArrowLeft:false,ArrowRight:false,ArrowUp:false,ArrowDown:false};
 window.addEventListener('keydown',e=>{
   if(e.key in dpadKeys){dpadKeys[e.key]=true;e.preventDefault();}
@@ -346,6 +371,8 @@ function applyDpadMovement(dt){
 }
 
 // ─── PARTICLES ──────────────────────────────────────────────
+// Fix #2: smoke() and spark() now respect the same MAX_PARTS ceiling
+// that debris() already used, preventing unbounded array growth.
 function debris(x,y,col,n=10,big=false,type='normal'){
   const cnt=Math.min(n,MAX_PARTS-parts.length);
   for(let i=0;i<cnt;i++){
@@ -358,15 +385,25 @@ function debris(x,y,col,n=10,big=false,type='normal'){
   }
 }
 function smoke(x,y,col,n=5){
-  for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.random()-.5)*60,vy:-80-Math.random()*60,life:1,decay:.5,col,sz:8+Math.random()*12,type:'smoke',rot:0,rotSpeed:0});
+  const cnt=Math.max(0,Math.min(n,MAX_PARTS-parts.length));
+  for(let i=0;i<cnt;i++)parts.push({x,y,vx:(Math.random()-.5)*60,vy:-80-Math.random()*60,life:1,decay:.5,col,sz:8+Math.random()*12,type:'smoke',rot:0,rotSpeed:0});
 }
 function spark(x,y,col,n=8){
-  for(let i=0;i<n;i++)parts.push({x,y,vx:(Math.random()-.5)*400,vy:(Math.random()-.5)*400,life:1,decay:2.5,col,sz:2+Math.random()*2,type:'spark',rot:0,rotSpeed:0});
+  const cnt=Math.max(0,Math.min(n,MAX_PARTS-parts.length));
+  for(let i=0;i<cnt;i++)parts.push({x,y,vx:(Math.random()-.5)*400,vy:(Math.random()-.5)*400,life:1,decay:2.5,col,sz:2+Math.random()*2,type:'spark',rot:0,rotSpeed:0});
 }
+// Fix #2 (cont.): cap the number of live DOM notification elements so a fast
+// loop can't queue hundreds of .notification divs into the page at once.
+const MAX_DOM_NOTIFICATIONS=12;
 function notify(x,y,txt,col='#00ffff'){
+  const gcEl=document.getElementById('gc');
+  const existing=gcEl.querySelectorAll('.notification');
+  if(existing.length>=MAX_DOM_NOTIFICATIONS){
+    existing[0].remove();
+  }
   const el=document.createElement('div');el.className='notification';el.textContent=txt;
   el.style.left=Math.max(5,Math.min(GW-130,x-55))+'px';el.style.top=y+'px';el.style.color=col;
-  document.getElementById('gc').appendChild(el);setTimeout(()=>el.remove(),1200);
+  gcEl.appendChild(el);setTimeout(()=>el.remove(),1200);
 }
 
 // ─── HUD ────────────────────────────────────────────────────
@@ -999,7 +1036,13 @@ function mainLoop(ts){
       if(score>30000)rank='UNIVERSE SHIFTER';
       if(score>50000)rank='SQUACH GOD';
       document.getElementById('gs-rank').textContent='RANK: '+rank;
+      // Fix #5: persist and surface high score
+      const finalScoreInt=Math.floor(score);
+      const isNewHigh=maybeUpdateHighScore(finalScoreInt);
+      document.getElementById('gs-highscore').textContent=isNewHigh?'★ NEW BEST! ★':('BEST: '+getHighScore());
+      renderTitleHighScore();
       document.querySelector('#gs .btn').focus();
+      state='idle_over';
     }
     return;
   }
@@ -1050,7 +1093,12 @@ function mainLoop(ts){
       obs.push({id:'pipe_t',x:GW+30,y:0,w:60,h:gy,vx:-ws.flapSpeed});
       obs.push({id:'pipe_b',x:GW+30,y:gy+gap,w:60,h:GH,vx:-ws.flapSpeed});
     }
-    ws.spawn=m.type==='flap'?3.5:.85/sc;
+    // Fix #1: floor the spawn interval so align mode (and others sharing
+    // this spawn timer) can't spiral into an unplayable spawn rate at
+    // high waves. Previously 0.85/sc had no lower bound and became a
+    // "difficulty cliff" by wave 5+; now it can't drop below 0.4s.
+    const SPAWN_RATE_FLOOR=0.4;
+    ws.spawn=m.type==='flap'?3.5:Math.max(SPAWN_RATE_FLOOR,0.85/sc);
   }
 
   if(m.type==='jump'){
@@ -1091,6 +1139,9 @@ function mainLoop(ts){
     if(!hit&&b.y<-50)beams.splice(i,1);
   }
 
+  // Fix #4: barrel/beat hitboxes switched from circular Math.hypot checks
+  // to AABB / ellipse checks that match their visual shape, so hits feel
+  // fair relative to what's actually on screen.
   for(let i=obs.length-1;i>=0;i--){
     const o=obs[i];
     o.y=(o.y||0)+(o.vy||0)*dt;
@@ -1099,15 +1150,29 @@ function mainLoop(ts){
     if(o.id==='stomp'){o.life-=dt*1.8;o.w+=220*dt;if(o.life<=0){obs.splice(i,1);continue;}if(Math.abs(sqX-o.x)<o.w/2&&Math.abs(sqY-o.y)<35)processDamage(sqX,sqY);continue;}
     if(o.id==='pipe_t'){if(sqX>o.x&&sqX<o.x+o.w&&sqY<o.h)processDamage(sqX,sqY);if(o.x+o.w<-10)obs.splice(i,1);continue;}
     if(o.id==='pipe_b'){if(sqX>o.x&&sqX<o.x+o.w&&sqY>o.y)processDamage(sqX,sqY);if(o.x+o.w<-10)obs.splice(i,1);continue;}
-    if(o.id==='beat'){if(o.y>GH+30){obs.splice(i,1);continue;}if(o.y>GH-230&&Math.abs(sqX-o.x)<46&&sqY>GH-230)processDamage(sqX,sqY);continue;}
+    if(o.id==='beat'){
+      // Beat blocks are drawn as 80x40 rectangles centered on (o.x, o.y).
+      // Use an AABB check against the player's approximate body box
+      // instead of the old radius-46 circle, which under/over-counted
+      // hits near the corners of the block.
+      if(o.y>GH+30){obs.splice(i,1);continue;}
+      const halfW=40+18; // block half-width + player half-width
+      const blockTop=GH-165,blockBottom=GH-165+40;
+      if(o.y+20>blockTop&&o.y-20<blockBottom&&Math.abs(sqX-o.x)<halfW&&sqY>GH-230)processDamage(sqX,sqY);
+      continue;
+    }
     if(o.id==='laser'){o.life-=dt*.8;if(o.life<=0||o.y>GH+50){obs.splice(i,1);continue;}if(Math.hypot(o.x-sqX,o.y-sqY)<38)processDamage(sqX,sqY);continue;}
 
     if(o.id==='barrel'){
       if(o.x<-80){obs.splice(i,1);continue;}
       if(m.type==='jump'){
-        const inX=sqX+18>o.x-24&&sqX-18<o.x+24;
-        const inY=sqY>o.gy-58&&sqY<=o.gy+5;
-        if(inX&&inY)processDamage(sqX,sqY);
+        // Barrels render as an ellipse ~24px wide, ~28px tall, centered at
+        // (o.x, o.gy-28). Check the player against that ellipse rather
+        // than a generic circle so grazes near the rounded top/bottom
+        // don't register as unfair hits.
+        const ex=(sqX-o.x)/(24+16); // barrel half-width + player half-width fudge
+        const ey=(sqY-28-(o.gy-28))/(28+22); // barrel half-height + player half-height fudge
+        if(ex*ex+ey*ey<1)processDamage(sqX,sqY);
       }
       continue;
     }
@@ -1300,3 +1365,4 @@ function mainLoop(ts){
 </script>
 </body>
 </html>
+
