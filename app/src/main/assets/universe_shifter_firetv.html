@@ -57,7 +57,7 @@
 
   /* CINEMATIC CANVAS */
   #cin-canvas{position:absolute;inset:0;z-index:210;display:none;}
-  #cin-caption{position:absolute;bottom:70px;left:10px;right:10px;z-index:211;display:none;
+  #cin-caption{position:absolute;top:64px;left:10px;right:10px;z-index:211;display:none;
     background:rgba(0,0,0,0.82);border:1px solid rgba(68,255,68,0.3);border-radius:8px;
     padding:12px 18px;font-family:'Black Ops One',cursive;font-size:clamp(10px,2.5vw,14px);
     color:#fff;letter-spacing:1px;line-height:1.7;text-align:center;min-height:60px;}
@@ -314,7 +314,7 @@ function addRipple(x,y){
 // GAME STATE
 // ═══════════════════════════════════════════════════════════
 const FLOOR_Y=GH-110;
-const MAX_LIVES=13;
+const MAX_LIVES=20;
 let state='standby',rafId=0;
 let score=0,wave=1,lives=9,inv=0;
 let runnerBonusLives=0;
@@ -1195,7 +1195,14 @@ function mainLoop(ts){
 
     const hr=o.id==='modtoe'?38:42;
     if(Math.hypot(o.x-sqX,(o.y||0)-sqY)<hr){
-      if(o.id==='modtoe'){score+=300*sc;addCombo();addFloatingText(o.x,(o.y||0)-30,'+300','#44ff44',16);notify(o.x,o.y||0,'+ALIGNED','#44ff44');sfxAlign();obs.splice(i,1);debris(o.x,o.y||0,'#44ff44',6,false,'spark');}
+      if(o.id==='modtoe'){
+        score+=300*sc;addCombo();
+        if(lives<MAX_LIVES){lives++;}
+        addFloatingText(o.x,(o.y||0)-30,'+300 +1 LIFE','#44ff44',15);
+        notify(o.x,o.y||0,'+ALIGNED +1 LIFE','#44ff44');
+        sfxAlign();obs.splice(i,1);debris(o.x,o.y||0,'#44ff44',6,false,'spark');
+        syncHUD();
+      }
       else{processDamage(sqX,sqY);obs.splice(i,1);}
     }else if((o.y||0)>GH+80||o.x<-180){
       if(o.id==='modtoe')processDamage(sqX,GH-20);
